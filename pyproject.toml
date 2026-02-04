@@ -1,0 +1,60 @@
+[project]
+name = "ebm-mvp"
+version = "0.1.0"
+description = "An attempt to create a Sudoku Solver using Yann LeCunn's latent reasoning approach"
+readme = "README.md"
+requires-python = ">=3.13, <3.14"
+dependencies = [
+    "huggingface>=0.0.1",
+    "kaggle>=2.0.0",
+    "numpy>=2.4.2",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "torch>=2.10.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest >= 9.0.1",
+    "pytest-mock >= 3.15.1",
+    "pytest-asyncio >= 1.3.0",
+    "pytest-cov >= 7.0.0",
+    "ruff >= 0.14.6",
+    "ty >= 0.0.1a27",
+]
+unit-test = [
+    "pytest >= 9.0.1",
+    "pytest-mock >= 3.15.1",
+    "pytest-asyncio >= 1.3.0",
+    "pytest-cov >= 7.0.0",
+]
+code-quality = [
+    "ruff >= 0.14.6",
+    "ty >= 0.0.1a27",
+]
+
+[tool.ruff]
+fix = true
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["D", "RUF", "PT", "TID", "I", "PL"]
+ignore = ["D203", "D212"]
+per-file-ignores = { "tests/.py" = ["D", "PLR"], "_test.py" = ["D"] }
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ty.terminal]
+output-format = "concise"
+
+[tool.ty.rules]
+unused-ignore-comment = "error"
+
+[tool.pytest]
+addopts = ["--cov=src", "--cov-report", "xml", "--cov-report=term-missing", "--cov-fail-under=95", "--maxfail=3", "--durations=5"]
+
+[tool.coverage.run]
+source = ["src"]
