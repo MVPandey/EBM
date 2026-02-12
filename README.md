@@ -22,11 +22,13 @@ graph LR
     puzzle["Puzzle (9x9)"] --> CE["Context Encoder<br/><i>6-layer Transformer</i>"]
     CE --> z_ctx["z_context"]
     z_ctx --> P["Predictor<br/><i>3-layer MLP</i>"]
-    z["z ~ N(0, I)"] --> P
+    z["z"] --> P
     P --> z_pred["z_pred"]
 
     solution["Solution (9x9)"] --> TE["Target Encoder<br/><i>EMA of Context Encoder</i>"]
     TE --> z_tgt["z_target"]
+    z_tgt --> ZE["z_encoder<br/><i>Linear projection</i>"]
+    ZE -- "+ noise" --> z
 
     z_pred -. "Energy = ‖z_pred − z_target‖²" .-> z_tgt
 
@@ -38,6 +40,7 @@ graph LR
     style z_pred fill:#4a9eff,color:#fff
     style z_tgt fill:#4a9eff,color:#fff
     style z_ctx fill:#6bcb77,color:#fff
+    style z fill:#ff9800,color:#fff
 ```
 
 ### Inference (Langevin Dynamics)
@@ -92,6 +95,23 @@ At inference time, the model solves puzzles through Langevin dynamics — gradie
 2. For each step, compute energy = latent_energy + constraint_penalty
 3. Update z via gradient descent with noise (temperature annealing)
 4. Select the lowest-energy chain and decode to a discrete grid
+
+## Results
+
+First training run: 9M puzzles (8M train / 500K val), 20 epochs, ~7.5 hours on RTX 5090.
+
+![Training Results](assets/training_run2.png)
+
+| Metric | Epoch 1 | Epoch 10 | Epoch 19 (final) | Kona 1.0 |
+|--------|---------|----------|-------------------|----------|
+| Cell accuracy | 84.9% | 96.2% | **97.2%** | 96.2% (hard puzzles) |
+| Puzzle accuracy | 14.8% | 67.3% | **74.7%** | 96.2% (hard puzzles) |
+
+These are forward-pass decode accuracies — the model predicts cell values in a single pass without Langevin dynamics. The inference solver (iterative refinement via gradient-based optimization) should push puzzle accuracy higher.
+
+Note: Kona's 96.2% is on hard puzzles specifically; our validation set includes all difficulty levels. Direct comparison requires difficulty-stratified evaluation.
+
+See [training-log.md](training-log.md) for detailed run history, bugs found, and lessons learned.
 
 ## Project Structure
 

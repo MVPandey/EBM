@@ -52,7 +52,58 @@ Key finding: 25% relative improvement over random, representations not collapsin
 
 ## Run 2: Full Scale (9M samples, 20 epochs)
 
-**Date:** Feb 11, 2026
+**Date:** Feb 11-12, 2026
 **Config:** 9M samples (8M train / 500K val), batch_size=512, 20 epochs, lr=3e-4
 **Hardware:** RTX 5090
-**Estimated time:** ~8 hours (~24 min/epoch)
+**Duration:** 7.5 hours (~22 min/epoch)
+
+### Bug Fixed Before This Run
+
+**6. Latent variable z was uninformative**
+During training, z was sampled as pure random noise `N(0, I)`, uncorrelated with the solution. Both the predictor and decoder were trained to produce the same correct output regardless of z — so they learned to ignore it. At inference, Langevin dynamics optimized z via gradients, but since nothing had learned to use z, `dE/dz ≈ 0` and the optimization did nothing.
+
+Fixed by adding a `z_encoder` (linear projection from d_model → d_latent). During training: `z = z_encoder(z_target) + noise`, so z carries noisy solution information. The predictor and decoder learn to use z meaningfully. At inference, z starts random and Langevin dynamics can now follow real gradients toward valid solutions.
+
+### Results
+
+![Training Results](assets/training_run2.png)
+
+| Epoch | Cell Acc | Puzzle Acc | Train Loss | Val Energy |
+|-------|----------|------------|------------|------------|
+| 0 | 48.2% | 0.0% | 8.24 | 5.73 |
+| 1 | 84.9% | 14.8% | 7.22 | 5.87 |
+| 2 | 90.3% | 34.4% | 8.83 | 6.95 |
+| 5 | 94.2% | 54.8% | 9.17 | 4.94 |
+| 10 | 96.2% | 67.3% | 9.53 | 6.20 |
+| 15 | 97.0% | 73.9% | 9.72 | 7.32 |
+| 19 | **97.2%** | **74.7%** | 9.46 | 8.49 |
+
+### Observations
+
+- Cell accuracy surpassed Kona's 96.2% benchmark by epoch 10 (though Kona's metric is on hard puzzles specifically)
+- Puzzle accuracy plateaued around 74-75% in later epochs — diminishing returns on this learning rate schedule
+- Val energy increased in later epochs while accuracy still improved — the model is learning more complex representations, not collapsing
+- Forward-pass accuracy only; Langevin dynamics inference should improve puzzle accuracy further
+
+### What Worked
+
+- `z_encoder` fix was the key breakthrough: from 13.9% cell accuracy (Run 1) to 97.2%
+- VICReg on z_context with var=1.0, cov=0.01 — prevents collapse without dominating the loss
+- Decode loss weight=1.0 — gives the decoder enough gradient signal
+- Cosine LR decay after warmup — smooth training progression
+
+---
+
+## Key Lessons
+
+### Representation collapse is the primary failure mode
+Without VICReg on the right tensor, the encoder maps everything to a single point. Energy goes to zero (trivially correct), but nothing is learned. Monitor z_variance as a collapse detector.
+
+### The latent variable must carry information during training
+Random z teaches the model to ignore z entirely. Making z a noisy projection of z_target means the predictor and decoder learn to use z, and Langevin dynamics has meaningful gradients at inference time. This was the single biggest architectural fix.
+
+### Loss decomposition matters
+A decreasing total loss can hide complete failure. The decode loss "improved" because given cells were trivially correct, masking the fact that empty cells learned nothing. Always decompose losses and check each component independently.
+
+### Checkpoint what you care about
+Checkpointing by energy (lower=better) accidentally saved collapsed models. The metric you checkpoint on must align with what you actually want to optimize.

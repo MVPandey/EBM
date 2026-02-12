@@ -25,6 +25,7 @@ dev = [
     "pytest-cov >= 7.0.0",
     "ruff >= 0.14.6",
     "ty >= 0.0.1a27",
+    "matplotlib>=3.10.8",
 ]
 unit-test = [
     "pytest >= 9.0.1",
