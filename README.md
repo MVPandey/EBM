@@ -1,4 +1,4 @@
-# Sudoku JEPA
+# Enso
 
 An open-source replication of [Logical Intelligence's Kona 1.0](https://sudoku.logicalintelligence.com/) — an Energy-Based Model that solves Sudoku through latent reasoning. Kona achieved [96.2% accuracy on hard Sudoku](https://logicalintelligence.com/blog/energy-based-model-sudoku-demo) in ~313ms per puzzle, while frontier LLMs (GPT-5.2, Claude Opus 4.5, Gemini 3 Pro, DeepSeek V3.2) managed just 2% combined. This project implements the core idea: learn an energy landscape in representation space where valid solutions have low energy, then "think" at inference time by optimizing a latent variable via Langevin dynamics.
 
@@ -100,8 +100,8 @@ Requires Python 3.13+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 # Clone and install
-git clone https://github.com/MVPandey/EBM.git
-cd EBM
+git clone https://github.com/MVPandey/Enso.git
+cd Enso
 uv sync
 
 # Configure API keys (copy and fill in)
