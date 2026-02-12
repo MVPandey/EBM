@@ -92,6 +92,20 @@ Fixed by adding a `z_encoder` (linear projection from d_model → d_latent). Dur
 - Decode loss weight=1.0 — gives the decoder enough gradient signal
 - Cosine LR decay after warmup — smooth training progression
 
+### Next Steps
+
+**Inference evaluation.** The 97.2% cell / 74.7% puzzle numbers are forward-pass decode accuracy — a single pass through the decoder with random z. The Langevin dynamics solver (iterative refinement over 50+ steps with constraint penalties) hasn't been run yet. This should meaningfully boost puzzle accuracy since the solver can correct individual cell errors by optimizing z against Sudoku constraints.
+
+**Learning rate tuning.** Accuracy plateaued after epoch 15 with cosine decay from 3e-4. A second training phase with lower LR (e.g. 1e-4 or 5e-5) could push past the plateau. Alternatively, try a longer warmup or different schedule.
+
+**More epochs.** 20 epochs may not be enough — the curve was still climbing (slowly) at epoch 19. Running 50 epochs at reduced LR could squeeze out a few more points.
+
+**z_noise_scale sweep.** Currently fixed at 1.0. Lower noise (0.3-0.5) means z carries more solution info during training, potentially making the predictor/decoder rely on z more heavily. Higher noise (1.5-2.0) makes training harder but could improve robustness at inference when z starts from pure noise. Worth sweeping.
+
+**Difficulty-stratified evaluation.** Kona's 96.2% is specifically on hard puzzles. Our validation set is mixed difficulty. Need to stratify by number of given clues to get a fair comparison — easy puzzles (35+ clues) inflate our numbers, hard puzzles (17-25 clues) are the real test.
+
+**Decoder capacity.** The decoder is a lightweight 2-layer Transformer. The forward-pass accuracy ceiling might be limited by decoder capacity. Trying 3-4 layers or larger d_cell could help, though this would slow inference.
+
 ---
 
 ## Key Lessons
