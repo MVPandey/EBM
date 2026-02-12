@@ -1,12 +1,14 @@
 # Sudoku JEPA
 
-An Energy-Based Model that solves Sudoku through latent reasoning, inspired by Yann LeCun's Joint Embedding Predictive Architecture (JEPA). Rather than directly predicting cell values, the model learns an energy landscape in representation space where valid solutions correspond to low-energy states. At inference time, it "thinks" by iteratively optimizing a latent variable via Langevin dynamics, then decodes the result to a discrete grid.
+An open-source replication of [Logical Intelligence's Kona 1.0](https://sudoku.logicalintelligence.com/) — an Energy-Based Model that solves Sudoku through latent reasoning. Kona achieved [96.2% accuracy on hard Sudoku](https://logicalintelligence.com/blog/energy-based-model-sudoku-demo) in ~313ms per puzzle, while frontier LLMs (GPT-5.2, Claude Opus 4.5, Gemini 3 Pro, DeepSeek V3.2) managed just 2% combined. This project implements the core idea: learn an energy landscape in representation space where valid solutions have low energy, then "think" at inference time by optimizing a latent variable via Langevin dynamics.
 
 ## Motivation
 
-Large Language Models struggle with Sudoku — even frontier models achieve only single-digit accuracy on hard puzzles. Energy-Based Models offer a fundamentally different approach: instead of autoregressive token prediction, they learn a continuous energy function that can be optimized through iterative refinement. Recent work (Kona 1.0, Logical Intelligence 2025) validates this direction, achieving 96.2% on hard Sudoku with EBMs.
+The [96% vs 2% gap](https://logicalintelligence.com/blog/energy-based-model-sudoku-demo) between EBMs and LLMs on Sudoku isn't about Sudoku specifically — it exposes a fundamental architectural limitation. LLMs generate solutions token-by-token, committing to each digit as they go, with no way to revise earlier decisions when conflicts emerge later. EBMs instead produce a complete candidate solution and evaluate it against all constraints simultaneously, using gradient information in continuous latent space to move toward valid configurations.
 
-Key papers informing this design:
+[Logical Intelligence](https://logicalintelligence.com/) (with Yann LeCun as founding chair of the Technical Research Board, Fields Medalist Michael Freedman as Chief of Mathematics) demonstrated this with Kona 1.0 — trained only on partial solutions (50% masked), it learned the rules and generated full solutions at test time.
+
+This project is an independent replication using a JEPA (Joint Embedding Predictive Architecture) approach, informed by:
 - [I-JEPA](https://arxiv.org/abs/2301.08243) (CVPR 2023) — Self-supervised learning through prediction in representation space
 - [IRED](https://arxiv.org/abs/2401.02361) (2024) — Iterative reasoning with energy diffusion
 - [JEPA-Reasoner](https://arxiv.org/abs/2502.07253) (2025) — Applying JEPA to logical reasoning tasks
@@ -174,3 +176,13 @@ Training metrics are logged to [Weights & Biases](https://wandb.ai) when configu
 - Per-epoch: validation energy, cell accuracy, puzzle accuracy, z-variance (collapse detector)
 
 Runs are automatically named with timestamps for easy identification.
+
+See [training-log.md](training-log.md) for detailed run history and findings.
+
+## References
+
+- [Kona 1.0 Sudoku Demo](https://sudoku.logicalintelligence.com/) — Logical Intelligence's EBM achieving 96.2% on hard Sudoku
+- [EBM vs. LLMs: 96% vs. 2% Benchmark](https://logicalintelligence.com/blog/energy-based-model-sudoku-demo) — Technical blog post
+- [I-JEPA](https://arxiv.org/abs/2301.08243) — Self-supervised learning through prediction in representation space
+- [IRED](https://arxiv.org/abs/2401.02361) — Iterative reasoning with energy diffusion
+- [JEPA-Reasoner](https://arxiv.org/abs/2502.07253) — Applying JEPA to logical reasoning tasks
