@@ -31,11 +31,11 @@ class SudokuDataset:
 
     def load_all(self) -> pd.DataFrame:
         """Load and return the full dataset."""
-        return pd.read_csv(self._csv_path)
+        return pd.read_csv(self._csv_path, dtype=str)
 
     def load_head(self, k: int = 100) -> pd.DataFrame:
         """Load only the first *k* rows."""
-        return pd.read_csv(self._csv_path, nrows=k)
+        return pd.read_csv(self._csv_path, nrows=k, dtype=str)
 
     def load_fraction(self, frac: float = 0.1, seed: int = 42) -> pd.DataFrame:
         """
@@ -47,4 +47,4 @@ class SudokuDataset:
 
         """
         rng = random.Random(seed)
-        return pd.read_csv(self._csv_path, skiprows=lambda i: i > 0 and rng.random() > frac)
+        return pd.read_csv(self._csv_path, dtype=str, skiprows=lambda i: i > 0 and rng.random() > frac)

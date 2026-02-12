@@ -1,5 +1,5 @@
 """Utility functions for the application."""
 
-from .config import config
+from .config import ArchitectureConfig, TrainingConfig, config
 
-__all__ = ['config']
+__all__ = ['ArchitectureConfig', 'TrainingConfig', 'config']
