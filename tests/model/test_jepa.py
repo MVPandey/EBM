@@ -126,3 +126,5 @@ def test_backward_through_forward():
         assert p.grad is not None, f'No gradient for context_encoder.{name}'
     for name, p in model.predictor.named_parameters():
         assert p.grad is not None, f'No gradient for predictor.{name}'
+    for name, p in model.z_encoder.named_parameters():
+        assert p.grad is not None, f'No gradient for z_encoder.{name}'

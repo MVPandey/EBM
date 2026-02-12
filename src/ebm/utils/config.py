@@ -59,6 +59,7 @@ class TrainingConfig(BaseModel):
     langevin_lr: float = Field(default=0.01, description='Langevin dynamics step size.')
     langevin_noise_scale: float = Field(default=0.005, description='Langevin dynamics noise scale.')
     n_chains: int = Field(default=8, description='Number of parallel Langevin chains.')
+    z_noise_scale: float = Field(default=1.0, description='Noise scale for z during training (z = z_encoder(z_target) + noise * scale).')
 
 
 config = Config()

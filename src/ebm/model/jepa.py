@@ -77,6 +77,7 @@ class SudokuJEPA(nn.Module):
 
         self.context_encoder = SudokuEncoder(input_channels=10, cfg=arch_cfg)
         self.target_encoder = SudokuEncoder(input_channels=9, cfg=arch_cfg)
+        self.z_encoder = nn.Linear(arch_cfg.d_model, arch_cfg.d_latent)
         self.predictor = LatentPredictor(cfg=arch_cfg)
         self.decoder = SudokuDecoder(cfg=arch_cfg)
 
@@ -122,16 +123,15 @@ class SudokuJEPA(nn.Module):
             JEPAOutput with energy, z_pred, z_target, and decode_logits.
 
         """
-        batch_size = puzzle.shape[0]
-
         z_context = self.context_encoder(puzzle)
-        z = torch.randn(batch_size, self.arch_cfg.d_latent, device=puzzle.device)
-
-        z_pred = self.predictor(z_context, z)
 
         with torch.no_grad():
             z_target = self.target_encoder(solution.permute(0, 3, 1, 2))
 
+        z_target_latent = self.z_encoder(z_target)
+        z = z_target_latent + self.train_cfg.z_noise_scale * torch.randn_like(z_target_latent)
+
+        z_pred = self.predictor(z_context, z)
         energy = energy_fn(z_pred, z_target)
         decode_logits = self.decoder(z_context, z, puzzle, mask)
 
