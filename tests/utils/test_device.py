@@ -39,8 +39,8 @@ class TestResolveBatchSize:
             (24.0, 1024),
             (32.0, 1024),
             (40.0, 2048),
-            (80.0, 4096),
-            (141.0, 4096),
+            (80.0, 2048),
+            (141.0, 2048),
         ],
     )
     def test_vram_to_batch_mapping(self, vram_gb: float, expected_batch: int):
@@ -89,8 +89,8 @@ class TestAutoScaleConfig:
             patch('ebm.utils.device.torch.cuda.get_device_name', return_value='H200'),
         ):
             result = auto_scale_config(cfg)
-        assert result.batch_size == 4096
-        assert result.lr == pytest.approx(scale_lr(_BASE_LR, _BASE_BATCH_SIZE, 4096))
+        assert result.batch_size == 2048
+        assert result.lr == pytest.approx(scale_lr(_BASE_LR, _BASE_BATCH_SIZE, 2048))
 
     def test_preserves_other_config_fields(self):
         cfg = TrainingConfig(epochs=100, weight_decay=0.05)
