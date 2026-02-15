@@ -76,8 +76,11 @@ while step < N_STEPS:
         if step % 10 == 0:
             logger.info(
                 'Step %3d | total=%.4f | energy=%.4f | vicreg=%.4f | decode=%.4f | lr=%.2e',
-                step, loss_out.total.item(), loss_out.energy.item(),
-                loss_out.vicreg.item(), loss_out.decode.item(),
+                step,
+                loss_out.total.item(),
+                loss_out.energy.item(),
+                loss_out.vicreg.item(),
+                loss_out.decode.item(),
                 scheduler.get_last_lr()[0],
             )
 

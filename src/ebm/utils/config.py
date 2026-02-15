@@ -22,16 +22,16 @@ class Config(BaseSettings):
 class ArchitectureConfig(BaseModel):
     """Architecture hyperparameters for the Sudoku JEPA model."""
 
-    d_model: int = Field(default=256, description='Transformer hidden dimension.')
-    n_layers: int = Field(default=6, description='Number of encoder Transformer layers.')
+    d_model: int = Field(default=512, description='Transformer hidden dimension.')
+    n_layers: int = Field(default=8, description='Number of encoder Transformer layers.')
     n_heads: int = Field(default=8, description='Number of attention heads.')
-    d_ffn: int = Field(default=1024, description='Feed-forward network inner dimension.')
+    d_ffn: int = Field(default=2048, description='Feed-forward network inner dimension.')
     dropout: float = Field(default=0.1, description='Dropout rate.')
-    d_latent: int = Field(default=128, description='Latent variable z dimension.')
-    predictor_hidden: int = Field(default=512, description='Predictor MLP hidden dimension.')
-    decoder_layers: int = Field(default=2, description='Number of decoder Transformer layers.')
-    decoder_heads: int = Field(default=4, description='Number of decoder attention heads.')
-    decoder_d_cell: int = Field(default=64, description='Per-cell dimension in decoder.')
+    d_latent: int = Field(default=256, description='Latent variable z dimension.')
+    predictor_hidden: int = Field(default=1024, description='Predictor MLP hidden dimension.')
+    decoder_layers: int = Field(default=4, description='Number of decoder Transformer layers.')
+    decoder_heads: int = Field(default=8, description='Number of decoder attention heads.')
+    decoder_d_cell: int = Field(default=128, description='Per-cell dimension in decoder.')
 
 
 class TrainingConfig(BaseModel):
@@ -62,8 +62,8 @@ class TrainingConfig(BaseModel):
     z_noise_scale: float = Field(
         default=0.1,
         description='Noise scale for z during training (z = z_encoder(z_target) + noise * scale). '
-        'With L2-normalized z_encoder output (unit norm) and d_latent=128, '
-        'scale=0.1 gives noise L2 ≈ 1.13 for ~1:1 SNR.',
+        'With L2-normalized z_encoder output (unit norm) and d_latent=256, '
+        'scale=0.1 gives noise L2 ≈ 1.6 for ~0.6:1 SNR.',
     )
     constraint_loss_weight: float = Field(
         default=0.1, description='Weight for Sudoku constraint penalty during training.'

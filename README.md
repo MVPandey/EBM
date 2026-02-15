@@ -19,7 +19,7 @@ This project is an independent replication using a JEPA (Joint Embedding Predict
 
 ```mermaid
 graph LR
-    puzzle["Puzzle (9x9)"] --> CE["Context Encoder<br/><i>6-layer Transformer</i>"]
+    puzzle["Puzzle (9x9)"] --> CE["Context Encoder<br/><i>8-layer Transformer</i>"]
     CE --> z_ctx["z_context"]
     z_ctx --> P["Predictor<br/><i>3-layer MLP</i>"]
     z["z"] --> P
@@ -32,10 +32,10 @@ graph LR
 
     z_pred -. "Energy = ‖z_pred − z_target‖²" .-> z_tgt
 
-    z_ctx --> D["Decoder<br/><i>2-layer Transformer</i>"]
+    z_ctx --> D["Decoder<br/><i>4-layer Transformer</i>"]
     z --> D
     D --> logits["Cell Logits (9x9x9)"]
-    logits -. "CE loss<br/>(empty cells only)" .-> solution
+    logits -. "CE loss + constraint loss<br/>(empty cells only)" .-> solution
 
     style z_pred fill:#4a9eff,color:#fff
     style z_tgt fill:#4a9eff,color:#fff
@@ -71,47 +71,49 @@ graph LR
 
 | Module | Description | Parameters |
 |--------|-------------|------------|
-| **Context Encoder** | 6-layer Transformer with Sudoku-aware positional encoding (learned row + column + box embeddings). Encodes puzzle to z_context. | d_model=256, 8 heads |
+| **Context Encoder** | 8-layer Transformer with Sudoku-aware positional encoding (learned row + column + box embeddings). Encodes puzzle to z_context. | d_model=512, 8 heads |
 | **Target Encoder** | Same architecture, processes solutions. Updated via EMA from context encoder (no gradients). | EMA momentum 0.996 -> 1.0 |
-| **Predictor** | 3-layer MLP mapping (z_context, z) -> z_pred. Intentionally limited capacity so it can't ignore z. | hidden=512 |
-| **Decoder** | 2-layer lightweight Transformer decoding (z_context, z) to per-cell digit logits. Hard-enforces given clues. | 4 heads, d_cell=64 |
-| **Total** | ~7.4M trainable parameters | |
+| **Predictor** | 3-layer MLP mapping (z_context, z) -> z_pred. Intentionally limited capacity so it can't ignore z. | hidden=1024 |
+| **Decoder** | 4-layer Transformer decoding (z_context, z) to per-cell digit logits. Hard-enforces given clues. | 8 heads, d_cell=128 |
+| **Total** | ~50M trainable parameters | |
 
 ### Loss Function
 
-$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{energy}} + \mathcal{L}_{\text{VICReg}} + \mathcal{L}_{\text{decode}}$$
+$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{energy}} + \mathcal{L}_{\text{VICReg}} + \mathcal{L}_{\text{decode}} + \mathcal{L}_{\text{constraint}}$$
 
 | Term | Formula | Purpose |
 |------|---------|---------|
 | $\mathcal{L}_{\text{energy}}$ | $\|\|z_{\text{pred}} - z_{\text{target}}\|\|^2$ | Drives representation learning |
 | $\mathcal{L}_{\text{VICReg}}$ | Variance + covariance penalty on $z_{\text{context}}$ | Prevents representation collapse |
 | $\mathcal{L}_{\text{decode}}$ | Cross-entropy on empty cells only | Auxiliary decoder supervision |
+| $\mathcal{L}_{\text{constraint}}$ | Sudoku row/col/box uniqueness penalty on softmax(logits) | Teaches structural rules explicitly |
 
 ### Inference
 
 At inference time, the model solves puzzles through Langevin dynamics — gradient-based optimization of the latent variable z:
 
 1. Initialize multiple z chains from N(0, I)
-2. For each step, compute energy = latent_energy + constraint_penalty
+2. For each step, decode z to a candidate solution, re-encode through the target encoder, and compute self-consistency energy + constraint penalty
 3. Update z via gradient descent with noise (temperature annealing)
 4. Select the lowest-energy chain and decode to a discrete grid
 
 ## Results
 
-First training run: 9M puzzles (8M train / 500K val), 20 epochs, ~7.5 hours on RTX 5090.
+Trained on 9M puzzles (8M train / 500K val), 20 epochs per run on RTX 5090.
 
-![Training Results](assets/training_run2.png)
+![Training Runs](assets/training_runs.png)
 
-| Metric | Epoch 1 | Epoch 10 | Epoch 19 (final) | Kona 1.0 |
-|--------|---------|----------|-------------------|----------|
-| Cell accuracy | 84.9% | 96.2% | **97.2%** | 96.2% (hard puzzles) |
-| Puzzle accuracy | 14.8% | 67.3% | **74.7%** | 96.2% (hard puzzles) |
+| Run | Changes | Cell Acc | Puzzle Acc | Langevin Puzzle Acc |
+|-----|---------|----------|------------|---------------------|
+| Run 2 | Baseline (bs=512, lr=3e-4) | 97.2% | 74.7% | 70.7% (-4.0) |
+| Run 3 | Larger batch (bs=2048, lr=6e-4) | 98.3% | 83.8% | 81.0% (-2.8) |
+| Run 4 | + z normalization, constraint loss, self-consistency energy | 97.6% | 82.5% | **83.5% (+1.0)** |
 
-These are forward-pass decode accuracies — the model predicts cell values in a single pass without Langevin dynamics. The inference solver (iterative refinement via gradient-based optimization) should push puzzle accuracy higher.
+**Key milestone in Run 4:** Langevin dynamics improved puzzle accuracy for the first time (+1.0%), after consistently hurting results in prior runs. The three structural fixes (L2-normalized z_encoder, constraint loss during training, self-consistency inference energy) aligned the solver with what the model learned.
 
-Note: Kona's 96.2% is on hard puzzles specifically; our validation set includes all difficulty levels. Direct comparison requires difficulty-stratified evaluation.
+Note: Kona's 96.2% is on hard puzzles specifically; our validation set includes all difficulty levels.
 
-See [training-log.md](training-log.md) for detailed run history, bugs found, and lessons learned.
+See [training-log.md](training-log.md) for detailed run history and lessons learned.
 
 ## Project Structure
 
@@ -139,10 +141,12 @@ src/ebm/
         metrics.py          # Cell accuracy, puzzle accuracy, constraint satisfaction
     utils/
         config.py           # Pydantic configuration classes
+        device.py           # GPU detection, auto-scaling batch size + LR
     main.py                 # CLI entry point
-tests/                      # Unit tests (81 tests, 96%+ coverage)
+tests/                      # Unit tests (101 tests, 96%+ coverage)
 scripts/
     smoke_test.py           # Quick training validation script
+    plot_training.py        # Generate training curve comparison plots
 ```
 
 ## Setup
@@ -223,7 +227,7 @@ Uses the [9 Million Sudoku Puzzles and Solutions](https://www.kaggle.com/dataset
 
 Training metrics are logged to [Weights & Biases](https://wandb.ai) when configured:
 
-- Per-step: total loss, energy loss, VICReg loss, decode loss, learning rate, EMA momentum
+- Per-step: total loss, energy loss, VICReg loss, decode loss, constraint loss, learning rate, EMA momentum
 - Per-epoch: validation energy, cell accuracy, puzzle accuracy, z-variance (collapse detector)
 
 Runs are automatically named with timestamps for easy identification.
